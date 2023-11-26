@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Randomly Illuminated Points on a Waving Grid</title>
+    <style>
+        body { margin: 0; }
+    </style>
+</head>
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        camera.position.z = 5;
+
+        const sizeX = 5;
+        const sizeY = 5;
+        const segmentsX = 50;
+        const segmentsY = 50;
+
+        const geometry = new THREE.BufferGeometry();
+
+        const vertices = [];
+        const waveStrength = 0.6;
+
+        for (let i = 0; i <= segmentsX; i++) {
+            for (let j = 0; j <= segmentsY; j++) {
+                const x = (i / segmentsX) * sizeX - sizeX / 2;
+                const y = (j / segmentsY) * sizeY - sizeY / 2;
+                const z = 0;
+                vertices.push(x, y, z);
+            }
+        }
+
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+
+        const material = new THREE.PointsMaterial({
+            color: 0x00ff00,
+            size: 0.03
+        });
+
+        let points = new THREE.Points(geometry, material);
+        scene.add(points);
+
+        let cameraRotation = 0;
+
+        const illuminateRandomPoints = () => {
+            const pointsGeometry = new THREE.BufferGeometry();
+
+            const randomPointsCount = 900; // Adjust the number of illuminated points
+            const randomPointsIndices = [];
+            
+            for (let i = 0; i < randomPointsCount; i++) {
+                const randomIndex = Math.floor(Math.random() * (segmentsX + 1) * (segmentsY + 1));
+                randomPointsIndices.push(randomIndex);
+            }
+
+            const positions = geometry.attributes.position.array;
+
+            const randomPositions = new Float32Array(randomPointsCount * 3);
+
+            for (let i = 0; i < randomPointsCount; i++) {
+                const randomIndex = randomPointsIndices[i];
+                const baseIndex = randomIndex * 3;
+                randomPositions[i * 3] = positions[baseIndex];
+                randomPositions[i * 3 + 1] = positions[baseIndex + 1];
+                randomPositions[i * 3 + 2] = positions[baseIndex + 2];
+            }
+
+            pointsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(randomPositions, 3));
+
+            scene.remove(points);
+            points.geometry.dispose();
+            points.material.dispose();
+            points = new THREE.Points(pointsGeometry, material);
+            scene.add(points);
+        };
+
+        const animate = () => {
+            requestAnimationFrame(animate);
+
+            const time = Date.now() * 0.003;
+            const position = geometry.attributes.position.array;
+
+            for (let i = 0; i < position.length; i += 3) {
+                const x = position[i];
+                const y = position[i + 1];
+                position[i + 2] = Math.sin(x * waveStrength + y * waveStrength + time) * 0.5;
+            }
+
+            geometry.attributes.position.needsUpdate = true;
+
+            // Rotate the camera around the object
+            const radius = 5;
+            const cameraX = Math.sin(cameraRotation) * radius;
+            const cameraZ = Math.cos(cameraRotation) * radius;
+
+            camera.position.set(cameraX, 2, cameraZ);
+            camera.lookAt(0, 0, 0);
+
+            cameraRotation += 0.005; // Adjust the rotation speed
+
+            illuminateRandomPoints();
+
+            renderer.render(scene, camera);
+        };
+
+        animate();
+    </script>
+</body>
+</html>
